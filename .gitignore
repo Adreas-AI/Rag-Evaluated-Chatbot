@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+
+key_openai.txt
+.env
+
+logs/
+*.jsonl
+
+.venv/
