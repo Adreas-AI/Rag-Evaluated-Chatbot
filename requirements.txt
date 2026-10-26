@@ -1,0 +1,5 @@
+# Runtime dependencies
+streamlit>=1.40
+openai>=1.40
+pypdf>=4.0
+numpy>=1.26

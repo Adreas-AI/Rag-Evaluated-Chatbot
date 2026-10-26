@@ -1,10 +1,13 @@
+# Python
 __pycache__/
 *.pyc
+.venv/
+.pytest_cache/
 
+# Secrets: never commit keys
 key_openai.txt
 .env
 
+# Runtime evaluation logs (may contain user questions)
 logs/
 *.jsonl
-
-.venv/

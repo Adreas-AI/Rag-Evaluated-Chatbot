@@ -9,8 +9,8 @@ from rag_utils import build_index_from_pdf_bytes, get_context_and_sources, forma
 
 def merge_indexes(indexes: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Ενώνει πολλά indexes σε ένα.
-    Reindex chunk_id ώστε να μην υπάρχουν duplicates.
+    Merge multiple indexes into one.
+    Re-number chunk_id so there are no duplicates.
     """
     if not indexes:
         return {"filename": "KB", "embedding_model": "", "chunks": []}
@@ -37,7 +37,7 @@ def merge_indexes(indexes: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 st.set_page_config(page_title="My Evaluated RAG Chatbot", page_icon="🤖", layout="wide")
 st.title("🤖 My Evaluated RAG Chatbot")
-st.caption("Streamlit UI με evaluation + προαιρετικό RAG πάνω σε PDF + citations.")
+st.caption("Streamlit UI with automatic evaluation + optional RAG over PDFs + citations.")
 
 # ------------------------- SESSION STATE ------------------------- #
 if "client" not in st.session_state:
@@ -76,25 +76,25 @@ if "use_mmr" not in st.session_state:
 
 # ------------------------- SIDEBAR ------------------------- #
 with st.sidebar:
-    st.header("⚙️ Ρυθμίσεις")
+    st.header("⚙️ Settings")
 
-    st.session_state.use_rag = st.checkbox("Χρήση knowledge base (RAG mode)", value=st.session_state.use_rag)
+    st.session_state.use_rag = st.checkbox("Use knowledge base (RAG mode)", value=st.session_state.use_rag)
 
     st.markdown("### 📄 Knowledge Base (PDF)")
-    uploaded_pdfs = st.file_uploader("Ανέβασε PDF(s)", type=["pdf"], accept_multiple_files=True)
+    uploaded_pdfs = st.file_uploader("Upload PDF(s)", type=["pdf"], accept_multiple_files=True)
 
     colA, colB = st.columns(2)
     with colA:
-        build_btn = st.button("📚 Χτίσε KB", use_container_width=True)
+        build_btn = st.button("📚 Build KB", use_container_width=True)
     with colB:
-        clear_btn = st.button("🧹 Καθάρισε KB", use_container_width=True)
+        clear_btn = st.button("🧹 Clear KB", use_container_width=True)
 
     if clear_btn:
         st.session_state.rag_index = None
-        st.success("Καθαρίστηκε το knowledge base.")
+        st.success("Knowledge base cleared.")
 
     if uploaded_pdfs and build_btn:
-        with st.spinner("Χτίζω knowledge base (embeddings)..."):
+        with st.spinner("Building knowledge base (embeddings)..."):
             try:
                 indexes = []
                 for up in uploaded_pdfs:
@@ -106,38 +106,38 @@ with st.sidebar:
                     )
                     indexes.append(idx)
                 st.session_state.rag_index = merge_indexes(indexes)
-                st.success(f"✅ Έτοιμο KB από {len(uploaded_pdfs)} PDF(s).")
+                st.success(f"✅ KB ready from {len(uploaded_pdfs)} PDF(s).")
             except Exception:
-                st.error("Σφάλμα κατά το χτίσιμο του KB.")
+                st.error("Error while building the KB.")
                 st.code(traceback.format_exc(), language="text")
 
     if st.session_state.rag_index is not None:
-        st.caption("✅ Φορτωμένο KB:")
+        st.caption("✅ Loaded KB:")
         st.caption(st.session_state.rag_index.get("filename", "KB"))
         st.caption(f"Chunks: {len(st.session_state.rag_index.get('chunks', []))}")
     else:
-        st.caption("ℹ️ Δεν έχει φορτωθεί KB.")
+        st.caption("ℹ️ No KB loaded.")
 
     st.markdown("---")
     st.markdown("### 🔎 Retrieval settings")
     st.session_state.top_k = st.slider("Top-K chunks", 1, 8, int(st.session_state.top_k), 1)
 
-    # κρατάμε το toggle για UI, αλλά το rag_utils εδώ δεν εφαρμόζει MMR (σταθερότητα πρώτα)
+    # toggle kept for the UI, but rag_utils does not apply MMR yet (stability first)
     st.session_state.use_mmr = st.checkbox("MMR diversity retrieval", value=bool(st.session_state.use_mmr))
 
-    st.session_state.strict_rag = st.checkbox("Strict RAG (απάντα μόνο από το PDF)", value=bool(st.session_state.strict_rag))
-    st.session_state.show_sources = st.checkbox("Δείξε πηγές κάτω από κάθε απάντηση", value=bool(st.session_state.show_sources))
-    st.session_state.show_scores = st.checkbox("Δείξε scores", value=bool(st.session_state.show_scores))
+    st.session_state.strict_rag = st.checkbox("Strict RAG (answer only from the PDF)", value=bool(st.session_state.strict_rag))
+    st.session_state.show_sources = st.checkbox("Show sources under each answer", value=bool(st.session_state.show_sources))
+    st.session_state.show_scores = st.checkbox("Show scores", value=bool(st.session_state.show_scores))
 
     st.markdown("---")
     st.markdown("### 🧪 Admin")
-    show_eval = st.checkbox("Δείξε τελευταία αξιολόγηση", value=False)
+    show_eval = st.checkbox("Show last evaluation", value=False)
 
-    if st.button("🔁 Νέα συνομιλία"):
+    if st.button("🔁 New conversation"):
         st.session_state.conversation = init_context()
         st.session_state.chat_history = []
         st.session_state.last_eval = None
-        st.success("Ξεκίνησε νέα συνομιλία.")
+        st.success("Started a new conversation.")
 
 
 # ------------------------- CHAT HISTORY ------------------------- #
@@ -154,14 +154,14 @@ for turn in st.session_state.chat_history:
             st.caption(f"Sources: {cites}")
 
         if st.session_state.show_sources and sources:
-            with st.expander("📚 Πηγές (από PDF)", expanded=False):
+            with st.expander("📚 Sources (from PDF)", expanded=False):
                 for i, s in enumerate(sources, start=1):
                     page = s.get("page", 0)
                     chunk_id = s.get("chunk_id", -1)
                     score = s.get("score", None)
                     text = (s.get("text") or "").strip()
 
-                    header = f"**{i}. Σελ. {page} | chunk {chunk_id}**"
+                    header = f"**{i}. Page {page} | chunk {chunk_id}**"
                     if st.session_state.show_scores and isinstance(score, (int, float)):
                         header += f" — score={float(score):.3f}"
                     st.markdown(header)
@@ -170,13 +170,13 @@ for turn in st.session_state.chat_history:
 
 
 # ------------------------- USER INPUT ------------------------- #
-user_input = st.chat_input("Γράψε το μήνυμά σου...")
+user_input = st.chat_input("Type your message...")
 
 if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # ΠΑΝΤΑ define αυτά εδώ (για να μην υπάρξει NameError)
+    # ALWAYS define these here (avoids NameError)
     sources: List[Dict[str, Any]] = []
     retrieved_context: Optional[str] = None
 
@@ -187,7 +187,7 @@ if user_input:
     )
 
     if rag_is_ready:
-        with st.spinner("🔎 Αναζητώ σχετικές πηγές από το PDF..."):
+        with st.spinner("🔎 Searching the PDF for relevant sources..."):
             try:
                 result = get_context_and_sources(
                     st.session_state.client,
@@ -203,7 +203,7 @@ if user_input:
                     retrieved_context = format_context_with_citations(sources, include_scores=True)
 
             except Exception as e:
-                st.warning(f"Δεν μπόρεσα να πάρω context από το PDF: {e}")
+                st.warning(f"Could not retrieve context from the PDF: {e}")
                 sources = []
                 retrieved_context = None
 
@@ -213,15 +213,15 @@ if user_input:
         # Strict RAG guardrail (UI-level)
         if rag_is_ready and st.session_state.strict_rag and (not sources):
             assistant_reply = (
-                "Δεν βρήκα σχετικές πληροφορίες μέσα στο PDF για να απαντήσω με ασφάλεια.\n\n"
-                "Δοκίμασε:\n"
-                "- να το ρωτήσεις με άλλα λόγια, ή\n"
-                "- να ανεβάσεις άλλο/επιπλέον έγγραφο."
+                "I could not find relevant information in the PDF to answer reliably.\n\n"
+                "Try:\n"
+                "- rephrasing your question, or\n"
+                "- uploading another/additional document."
             )
             new_conversation = st.session_state.conversation
-            evaluation = {"label": "no_sources", "score": None, "explanation": "Strict RAG χωρίς sources.", "raw": "{}"}
+            evaluation = {"label": "no_sources", "score": None, "explanation": "Strict RAG with no sources.", "raw": "{}"}
         else:
-            with st.spinner("🤖 Σκέφτομαι..."):
+            with st.spinner("🤖 Thinking..."):
                 assistant_reply, new_conversation, evaluation = chat_turn(
                     st.session_state.client,
                     user_input,
@@ -238,14 +238,14 @@ if user_input:
             st.caption(f"Sources: {cites}")
 
         if st.session_state.show_sources and sources:
-            with st.expander("📚 Πηγές (από PDF)", expanded=False):
+            with st.expander("📚 Sources (from PDF)", expanded=False):
                 for i, s in enumerate(sources, start=1):
                     page = s.get("page", 0)
                     chunk_id = s.get("chunk_id", -1)
                     score = s.get("score", None)
                     text = (s.get("text") or "").strip()
 
-                    header = f"**{i}. Σελ. {page} | chunk {chunk_id}**"
+                    header = f"**{i}. Page {page} | chunk {chunk_id}**"
                     if st.session_state.show_scores and isinstance(score, (int, float)):
                         header += f" — score={float(score):.3f}"
                     st.markdown(header)
@@ -259,10 +259,10 @@ if user_input:
 
 # ------------------------- ADMIN: EVAL ------------------------- #
 if show_eval:
-    st.sidebar.subheader("Τελευταία αξιολόγηση")
+    st.sidebar.subheader("Last evaluation")
     eval_info = st.session_state.last_eval
     if eval_info is None:
-        st.sidebar.write("Δεν υπάρχει διαθέσιμη αξιολόγηση.")
+        st.sidebar.write("No evaluation available.")
     else:
         score = eval_info.get("score")
         label = eval_info.get("label", "unknown")
@@ -276,5 +276,5 @@ if show_eval:
             st.sidebar.markdown("**Explanation:**")
             st.sidebar.markdown(explanation)
 
-        with st.sidebar.expander("Raw JSON από τον evaluator"):
+        with st.sidebar.expander("Raw JSON from the evaluator"):
             st.sidebar.code(raw, language="json")

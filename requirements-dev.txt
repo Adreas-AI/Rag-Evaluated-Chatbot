@@ -1,0 +1,4 @@
+# Development: tests, linting and regenerating the sample PDF
+-r requirements.txt
+pytest>=8
+reportlab>=4

@@ -16,7 +16,7 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 
 def extract_text_by_page_from_pdf_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
     """
-    Επιστρέφει λίστα:
+    Returns a list:
     [{"page": 1, "text": "..."}, ...]
     """
     pdf_file = io.BytesIO(file_bytes)
@@ -42,7 +42,7 @@ def split_text_into_chunks(
     max_total_chars: int = 200_000,
 ) -> List[Dict[str, Any]]:
     """
-    Επιστρέφει chunks με offsets:
+    Returns chunks with offsets:
     [{"text": "...", "char_start": 0, "char_end": 999}, ...]
     """
     text = (text or "").strip()
@@ -194,7 +194,7 @@ def format_context_with_citations(
     include_scores: bool = False,
 ) -> str:
     """
-    Φτιάχνει context string με markers.
+    Builds a context string with citation markers.
     """
     blocks: List[str] = []
     for s in sources:
@@ -218,7 +218,7 @@ def get_context_and_sources(
     question: str,
     index: Dict[str, Any],
     top_k: int = 3,
-    use_mmr: bool = True,  # υπάρχει για συμβατότητα με το UI (δεν το χρησιμοποιούμε εδώ)
+    use_mmr: bool = True,  # kept for UI compatibility (not used here)
 ) -> Dict[str, Any]:
     sources = get_relevant_sources(client, question, index, top_k=top_k)
     return {
